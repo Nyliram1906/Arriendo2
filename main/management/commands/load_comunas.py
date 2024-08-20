@@ -6,7 +6,7 @@ from main.models import Comuna
 
 class Command(BaseCommand):
     def handle(self, *args, **kwargs):
-        archivo = open('data/comunas.csv', 'r')
+        archivo = open('data/comunas.csv', 'r', encoding='utf-8')
         reader = csv.reader(archivo, delimiter=';')
         next(reader) # Se salta la primera linea
         for fila in reader:

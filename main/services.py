@@ -5,7 +5,33 @@ from django.db.models import Q
 from django.db import connection
 from django.contrib import messages
 
-def crear_inmueble(nombre:str, descripcion:str, m2_construidos:int, m2_totales:int, num_estacionamientos:int, num_habitaciones:int, num_baños:int, direccion:str, precio_mensual_arriendo:int, tipo_de_inmueble:str, comuna_cod:str, rut_propietario:str):
+from django.contrib.auth.models import User
+from main.models import Inmueble, Comuna
+
+def crear_inmueble(nombre, descripcion, m2_construidos, m2_totales, num_estacionamientos, num_habitaciones, num_banos, direccion, precio_mensual_arriendo, tipo_de_inmueble, comuna_cod, rut_propietario):
+    try:
+        propietario = User.objects.get(username=rut_propietario)
+        comuna = Comuna.objects.get(cod=comuna_cod)  # Usa `cod` en lugar de `id`
+        Inmueble.objects.create(
+            nombre=nombre,
+            descripcion=descripcion,
+            m2_construidos=m2_construidos,
+            m2_totales=m2_totales,
+            num_estacionamientos=num_estacionamientos,
+            num_habitaciones=num_habitaciones,
+            num_baños=num_banos,
+            direccion=direccion,
+            precio_mensual_arriendo=precio_mensual_arriendo,
+            tipo_de_inmueble=tipo_de_inmueble,
+            comuna=comuna,
+            propietario=propietario
+        )
+    except User.DoesNotExist:
+        print(f"Error: El propietario con username '{rut_propietario}' no existe.")
+    except Comuna.DoesNotExist:
+        print(f"Error: La comuna con código '{comuna_cod}' no existe.")
+        
+""" def crear_inmueble(nombre:str, descripcion:str, m2_construidos:int, m2_totales:int, num_estacionamientos:int, num_habitaciones:int, num_baños:int, direccion:str, precio_mensual_arriendo:int, tipo_de_inmueble:str, comuna_cod:str, rut_propietario:str):
     comuna = Comuna.objects.get(cod=comuna_cod)
     propietario = User.objects.get(username=rut_propietario)
     Inmueble.objects.create(
@@ -22,9 +48,9 @@ def crear_inmueble(nombre:str, descripcion:str, m2_construidos:int, m2_totales:i
         comuna = comuna,
         propietario = propietario,
     )
-    return True
+    return True """
 
-def editar_inmueble(inmueble_id:int, nombre:str, descripcion:str, m2_construidos:int, m2_totales:int, num_estacionamientos:int, num_habitaciones:int, num_baños:int, direccion:str, precio_mensual_arriendo:int, tipo_de_inmueble:str, comuna:str, rut_propietario:str, imagen:object):
+def editar_inmueble(inmueble_id:int, nombre:str, descripcion:str, m2_construidos:int, m2_totales:int, num_estacionamientos:int, num_habitaciones:int, num_baños:int, direccion:str, precio_mensual_arriendo:int, tipo_de_inmueble:str, comuna:str, rut_propietario:str):
     inmueble = Inmueble.objects.get(id=inmueble_id)
     comuna = Comuna.objects.get(cod=comuna)
     propietario = User.objects.get(username=rut_propietario)
@@ -40,14 +66,13 @@ def editar_inmueble(inmueble_id:int, nombre:str, descripcion:str, m2_construidos
     inmueble.tipo_de_inmueble = tipo_de_inmueble
     inmueble.comuna = comuna
     inmueble.propietario = propietario
-    inmueble.imagen = imagen
     inmueble.save()
     return True
 
 
-def crear_user(request, username:str, first_name:str, last_name:str, email:str, password:str, pass_confirm:str, direccion:str, rol:str='arrendatario', telefono:str=None) -> bool:
+def crear_user(username:str, first_name:str, last_name:str, email:str, password:str, pass_confirm:str, direccion:str, rol:str='arrendatario', telefono:str=None) -> bool:
     if password != pass_confirm:
-        messages.error(request, 'Las contraseñas no coinciden')
+        print('Las contraseñas no coinciden')
         return False
     try:
         user = User.objects.create_user(
@@ -58,16 +83,17 @@ def crear_user(request, username:str, first_name:str, last_name:str, email:str, 
             last_name=last_name,
         )
     except IntegrityError:
-        messages.error(request, 'El rut ya está ingresado')
+        print('El rut ya está ingresado')
         return False
     UserProfile.objects.create(
         direccion=direccion,
         telefono_personal=telefono,
-        rol = rol,
+        rol=rol,
         user=user
     )
-    messages.success(request, 'Usuario creado con éxito! Por favor, ingrese')
+    print('Usuario creado con éxito! Por favor, ingrese')
     return True
+
 
 def eliminar_inmueble(inmueble_id):
     inmueble_encontrado = Inmueble.objects.get(id=inmueble_id)
@@ -94,11 +120,12 @@ def editar_user_sin_password(rut:str, first_name:str, last_name:str, email:str, 
 
 def cambio_password(request, password:str, password_repeat:str):
     if password != password_repeat:
-        # messages.error(request, 'Las contraseñas no coinciden')
-        return
+        messages.warning(request, 'Las contraseñas no coinciden')
+        return False
     request.user.set_password(password)
     request.user.save()
-    #  messages.success(request, 'Contraseña actualizada exitosamente')
+    messages.success(request, 'Contraseña actualizada exitosamente')
+    return True
 
 def obtener_propiedades_comunas(filtro): # recibe nombre o descripción
     if filtro is None:  
